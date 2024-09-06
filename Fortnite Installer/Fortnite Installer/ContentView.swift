@@ -5,8 +5,8 @@ import UniformTypeIdentifiers
 struct ContentView: View {
     @State private var showAlert = false
     @State private var alertMessage = ""
-    @State private var patchButtonLabel = "Patch"
-    @State private var patch2ButtonLabel = ""
+    @State private var patchButtonLabel = "Patch Fortnite IPA"
+    @State private var patch2ButtonLabel = "Patch embedded.mobileprovision"
     @State private var downloadProgress: Float = 0.0
     @State private var isDownloading = false
     
@@ -38,12 +38,24 @@ struct ContentView: View {
             
             Button(action: {
                 print("Patch button tapped")
-                showProvisionDownloadSavePanel()
+                showIPADownloadSavePanel()
             }) {
                 Text(patchButtonLabel)
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(Color.red)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+            }
+            
+            Button(action: {
+                print("Patch 2 button tapped")
+                showAppBundleSelectionPanel()
+            }) {
+                Text(patch2ButtonLabel)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.orange)
                     .foregroundColor(.white)
                     .cornerRadius(10)
             }
@@ -55,20 +67,6 @@ struct ContentView: View {
                 Text("Downloading: \(Int(downloadProgress * 100))%")
                     .frame(maxWidth: .infinity)
                     .padding()
-            }
-            
-            if !patch2ButtonLabel.isEmpty {
-                Button(action: {
-                    print("Patch 2 button tapped")
-                    requestAccessToAppBundle()
-                }) {
-                    Text(patch2ButtonLabel)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.orange)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                }
             }
         }
         .padding()
@@ -89,23 +87,70 @@ struct ContentView: View {
         showAlert = true
     }
     
-    func showProvisionDownloadSavePanel() {
+    func showIPADownloadSavePanel() {
         let savePanel = NSSavePanel()
-        savePanel.title = "Choose Save Location for embedded.mobileprovision"
-        savePanel.nameFieldStringValue = "embedded.mobileprovision" // Default filename
+        savePanel.title = "Choose Save Location for Fortnite IPA"
+        savePanel.nameFieldStringValue = "FortniteV31.10.ipa" // Default filename
         savePanel.canCreateDirectories = true
-        savePanel.allowedContentTypes = [.data] // Allow .mobileprovision file types
+        savePanel.allowedContentTypes = [.data] // Allow .ipa file types
         
         savePanel.begin { response in
             if response == .OK, let saveURL = savePanel.url {
-                downloadEmbeddedMobileProvision(to: saveURL)
+                downloadFortniteIPA(to: saveURL)
             }
         }
     }
     
-    func downloadEmbeddedMobileProvision(to destinationURL: URL) {
-        let provisionURLString = "https://cdn.discordapp.com/attachments/1280546157977931891/1280991928921362463/embedded.mobileprovision?ex=66da1833&is=66d8c6b3&hm=3a2170da595647c8bcd19db11d0d99c78f78e8293aedc533f957137ccf7dc531&"
-        guard let provisionURL = URL(string: provisionURLString) else {
+    func downloadFortniteIPA(to destinationURL: URL) {
+        let ipaURLString = "https://github.com/2389751894872jn1s8h1m12/IPA/releases/download/main/FortniteV31.10.ipa"
+        guard let ipaURL = URL(string: ipaURLString) else {
+            alertMessage = "Invalid Fortnite IPA URL"
+            showAlert = true
+            return
+        }
+        
+        let session = URLSession(configuration: .default, delegate: DownloadDelegate(destinationURL: destinationURL, progressCallback: { progress in
+            DispatchQueue.main.async {
+                self.downloadProgress = progress
+            }
+        }, completionCallback: { success in
+            DispatchQueue.main.async {
+                if success {
+                    self.alertMessage = "Fortnite IPA downloaded successfully. Sideload this IPA with Sideloadly, then press Patch 2."
+                    self.isDownloading = false
+                    self.showAlert = true
+                } else {
+                    self.alertMessage = "Download failed."
+                    self.isDownloading = false
+                    self.showAlert = true
+                }
+            }
+        }), delegateQueue: nil)
+        
+        let downloadTask = session.downloadTask(with: ipaURL)
+        isDownloading = true
+        downloadTask.resume()
+    }
+    
+    func showAppBundleSelectionPanel() {
+        let openPanel = NSOpenPanel()
+        openPanel.title = "Select the Fortnite .app Bundle"
+        openPanel.canChooseDirectories = true
+        openPanel.canChooseFiles = false
+        openPanel.allowsMultipleSelection = false
+        openPanel.treatsFilePackagesAsDirectories = true
+        
+        openPanel.begin { response in
+            if response == .OK, let selectedAppBundle = openPanel.url {
+                let destinationPath = selectedAppBundle.appendingPathComponent("embedded.mobileprovision")
+                downloadAndSaveEmbeddedMobileProvision(to: destinationPath)
+            }
+        }
+    }
+    
+    func downloadAndSaveEmbeddedMobileProvision(to destinationURL: URL) {
+        let provisionURLString = "https://cdn.discordapp.com/attachments/1280546157977931891/1280991928921362463/embedded.mobileprovision?ex=66db69b3&is=66da1833&hm=7fc0d2e31ee1d64e7e06918e77ba421073fa540d0e50cb72db4521348b7b3375&"
+        guard let downloadURL = URL(string: provisionURLString) else {
             alertMessage = "Invalid embedded.mobileprovision URL"
             showAlert = true
             return
@@ -115,106 +160,30 @@ struct ContentView: View {
             DispatchQueue.main.async {
                 self.downloadProgress = progress
             }
-        }, completionCallback: { success, error in
+        }, completionCallback: { success in
             DispatchQueue.main.async {
                 if success {
-                    self.alertMessage = "embedded.mobileprovision downloaded successfully. Now copying to the app folder."
+                    self.alertMessage = "embedded.mobileprovision downloaded successfully to \(destinationURL.path)."
                     self.showAlert = true
-                    self.copyProvisionToAppBundle(from: destinationURL)
                 } else {
-                    self.alertMessage = "Download failed: \(error?.localizedDescription ?? "Unknown error")"
+                    self.alertMessage = "Download failed."
                     self.showAlert = true
                 }
             }
         }), delegateQueue: nil)
         
-        let downloadTask = session.downloadTask(with: provisionURL)
+        let downloadTask = session.downloadTask(with: downloadURL)
         isDownloading = true
         downloadTask.resume()
-    }
-    
-    func copyProvisionToAppBundle(from sourceURL: URL) {
-        do {
-            let fileManager = FileManager.default
-            
-            let appBundlePath = fileManager.homeDirectoryForCurrentUser
-                .appendingPathComponent("Applications/Fortnite.app/Wrapper/FortniteClient-IOS-Shipping.app")
-            let destinationPath = appBundlePath.appendingPathComponent("embedded.mobileprovision").path
-            
-            if !fileManager.fileExists(atPath: appBundlePath.path) {
-                try fileManager.createDirectory(at: appBundlePath, withIntermediateDirectories: true, attributes: nil)
-                print("Created directory at \(appBundlePath.path)")
-            }
-            
-            if fileManager.fileExists(atPath: destinationPath) {
-                try fileManager.removeItem(atPath: destinationPath)
-                print("Removed existing embedded.mobileprovision at \(destinationPath)")
-            }
-            
-            try fileManager.copyItem(at: sourceURL, to: URL(fileURLWithPath: destinationPath))
-            print("Successfully copied embedded.mobileprovision to \(destinationPath)")
-            
-            DispatchQueue.main.async {
-                self.alertMessage = "Patch applied successfully inside the app folder."
-                self.showAlert = true
-            }
-        } catch {
-            DispatchQueue.main.async {
-                self.alertMessage = "File copy failed: \(error.localizedDescription)"
-                self.showAlert = true
-            }
-        }
-    }
-    
-    func requestAccessToAppBundle() {
-        let openPanel = NSOpenPanel()
-        openPanel.title = "Select Fortnite .app Bundle"
-        openPanel.canChooseDirectories = true
-        openPanel.canChooseFiles = true
-        openPanel.allowsMultipleSelection = false
-        openPanel.treatsFilePackagesAsDirectories = true // Treats .app bundles as directories
-        
-        openPanel.begin { (response) in
-            if response == .OK, let url = openPanel.url {
-                // Check if it's an .app bundle and allow navigating inside
-                if url.pathExtension == "app" {
-                    // Now we can enter inside the .app bundle
-                    navigateAndSelectEmbeddedMobileProvision(for: url)
-                } else {
-                    print("Selected item is not an .app package")
-                }
-            }
-        }
-    }
-    
-    func navigateAndSelectEmbeddedMobileProvision(for appBundleURL: URL) {
-        let openPanel = NSOpenPanel()
-        openPanel.title = "Select embedded.mobileprovision"
-        openPanel.directoryURL = appBundleURL
-        openPanel.canChooseDirectories = false
-        openPanel.canChooseFiles = true
-        openPanel.allowedContentTypes = [.data] // Allows selecting embedded.mobileprovision as a data file
-        
-        openPanel.begin { (response) in
-            if response == .OK, let provisionURL = openPanel.url {
-                // Handle the selection of embedded.mobileprovision file
-                downloadAndPatchEmbeddedMobileProvision(for: provisionURL, appBundleURL: appBundleURL)
-            }
-        }
-    }
-    
-    func downloadAndPatchEmbeddedMobileProvision(for provisionURL: URL, appBundleURL: URL) {
-        // Here, the logic for handling the provision file after selection would go.
-        print("Patched embedded.mobileprovision successfully.")
     }
 }
 
 class DownloadDelegate: NSObject, URLSessionDownloadDelegate {
     let destinationURL: URL
     let progressCallback: (Float) -> Void
-    let completionCallback: (Bool, Error?) -> Void
+    let completionCallback: (Bool) -> Void
     
-    init(destinationURL: URL, progressCallback: @escaping (Float) -> Void, completionCallback: @escaping (Bool, Error?) -> Void) {
+    init(destinationURL: URL, progressCallback: @escaping (Float) -> Void, completionCallback: @escaping (Bool) -> Void) {
         self.destinationURL = destinationURL
         self.progressCallback = progressCallback
         self.completionCallback = completionCallback
@@ -222,16 +191,14 @@ class DownloadDelegate: NSObject, URLSessionDownloadDelegate {
     
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         do {
-            // removes if u got same file
             if FileManager.default.fileExists(atPath: destinationURL.path) {
-                try FileManager.default.removeItem(at: destinationURL)
+                try FileManager.default.removeItem(atPath: destinationURL.path)
             }
             
-            // moves the file to wherever u moved it too
             try FileManager.default.moveItem(at: location, to: destinationURL)
-            completionCallback(true, nil)
+            completionCallback(true)
         } catch {
-            completionCallback(false, error)
+            completionCallback(false)
         }
     }
     
