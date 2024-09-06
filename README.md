@@ -1,3 +1,5 @@
+UPDATE: V3 is in the works, making everything one click hopefully and thanks to a Reddit User, that commented on the reddit (credits to him) he told me you can use xattr to use app (Meaning you won't have to disable SIP)
+
 Hi, this is a WIP Fortnite Installer/Patcher for Mac Users (M Series Only)
 
 Requirements:
