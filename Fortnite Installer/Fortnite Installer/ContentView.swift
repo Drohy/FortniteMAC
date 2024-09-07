@@ -102,7 +102,7 @@ struct ContentView: View {
     }
     
     func downloadFortniteIPA(to destinationURL: URL) {
-        let ipaURLString = "https://github.com/2389751894872jn1s8h1m12/IPA/releases/download/main/FortniteV31.10.ipa"
+        let ipaURLString = "https://download1530.mediafire.com/dpcqzfytq11g5DWbw-LH9fvu4pwwrTI_rUe1HSxawRP4CQQfijMJ0AgKg4Xxb8df4LmXkhJ-d8hzYXBXnxYbRg_1x9i7F7XbMAdu3ve3eL3To8CwjI6Gd7Wqst021ooNjtz_301GDSoIH-EKwtQ5-L1pX98v_QexXz1SByLpWaw/tpay1hzcgneqxx6/Fortnite31101FullScreen.ipa"
         guard let ipaURL = URL(string: ipaURLString) else {
             alertMessage = "Invalid Fortnite IPA URL"
             showAlert = true
@@ -149,7 +149,7 @@ struct ContentView: View {
     }
     
     func downloadAndSaveEmbeddedMobileProvision(to destinationURL: URL) {
-        let provisionURLString = "https://cdn.discordapp.com/attachments/1280546157977931891/1280991928921362463/embedded.mobileprovision?ex=66db69b3&is=66da1833&hm=7fc0d2e31ee1d64e7e06918e77ba421073fa540d0e50cb72db4521348b7b3375&"
+        let provisionURLString = "https://github.com/Drohy/FortniteMAC/raw/04890b0778751d20afd5330d4346972e99b9c1f5/FILES/embedded.mobileprovision"
         guard let downloadURL = URL(string: provisionURLString) else {
             alertMessage = "Invalid embedded.mobileprovision URL"
             showAlert = true
